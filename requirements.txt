@@ -1,0 +1,8 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+fonttools==4.53.1
+cairosvg==2.7.1
+Pillow==10.4.0
+numpy==2.1.0
+pikepdf==9.2.0
