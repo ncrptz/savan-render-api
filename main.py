@@ -81,6 +81,7 @@ def get_fonts(assets: dict) -> dict:
     if not _fonts:
         _fonts['NF']  = load_font(assets['engoerg'])
         _fonts['RKF'] = load_font(assets['rockwell_regular'], '.otf')
+        _fonts['RKB'] = load_font(assets['rockwell_bold'], '.otf')
         _fonts['GIF'] = load_font(assets['georgia_italic'])
         log.info("Fonts loaded ✓")
     return _fonts
@@ -137,9 +138,11 @@ def remove_white_bg(img_bytes):
     res=Image.fromarray(data,'RGBA'); buf=io.BytesIO(); res.save(buf,'PNG')
     return base64.b64encode(buf.getvalue()).decode(), res.size[0], res.size[1]
 
-def sig_tag(b64, sw, sh, cx, ytop, w=2970):
-    h=int(w*sh/sw); x=int(cx-w/2)
-    return (f'<image x="{x}" y="{ytop}" width="{w}" height="{h}" '
+def sig_tag(b64, sw, sh, cx, ytop, w=2970, max_h=1300):
+    # Fit within w x max_h preserving aspect, so a tall signature scan can't
+    # grow downward into the signatory name printed below it.
+    scale=min(w/sw, max_h/sh); rw=sw*scale; rh=sh*scale; x=cx-rw/2
+    return (f'<image x="{x:.1f}" y="{ytop}" width="{rw:.1f}" height="{rh:.1f}" '
             f'preserveAspectRatio="xMidYMid meet" '
             f'xlink:href="data:image/png;base64,{b64}"/>')
 
@@ -184,6 +187,7 @@ def build_base_svg(assets, fonts, template, sponsored_by,
                    collab_logo_bytes, collab_sig_bytes,
                    collab_signer_name, collab_signer_title):
     NF,RKF,GIF = fonts['NF'],fonts['RKF'],fonts['GIF']
+    RKB = fonts['RKB']
     t2 = (template=='T2')
     svg = base64.b64decode(assets['svg2' if t2 else 'svg1']).decode('utf-8')
     svg = strip_photos(svg, template)
@@ -213,7 +217,7 @@ def build_base_svg(assets, fonts, template, sponsored_by,
             s2b,s2w,s2h = remove_white_bg(collab_sig_bytes)
             svg = svg.replace('</svg>', sig_tag(s2b,s2w,s2h,int(SIG2_CX),17800)+'\n</svg>')
         if collab_signer_name:
-            cng,_=outline(RKF,collab_signer_name,423.33,SIG2_LOCAL_CX,10500,"black","middle","sig2n")
+            cng,_=outline(RKB,collab_signer_name,423.33,SIG2_LOCAL_CX,10500,"black","middle","sig2n")
             svg=SIG2_NAME_RE.sub(f'<g transform="matrix(1 0 0 1 3201.97 9021.61)">{cng}</g>',svg,count=1)
         if collab_signer_title:
             ctg,_=outline(GIF,collab_signer_title,324.56,SIG2_CX,19892,"#373435","middle","sig2t")
