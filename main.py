@@ -135,7 +135,10 @@ def remove_white_bg(img_bytes):
     br=r.astype(int)+g.astype(int)+b.astype(int)
     data[:,:,3]=np.where(br>680,0,255)
     mid=(br>450)&(br<=680); data[:,:,3][mid]=((680-br[mid])/230*255).astype(np.uint8)
-    res=Image.fromarray(data,'RGBA'); buf=io.BytesIO(); res.save(buf,'PNG')
+    res=Image.fromarray(data,'RGBA')
+    bbox=res.split()[3].getbbox()          # trim transparent margins to the ink itself,
+    if bbox: res=res.crop(bbox)            # so bottom-anchoring sits the ink on the name
+    buf=io.BytesIO(); res.save(buf,'PNG')
     return base64.b64encode(buf.getvalue()).decode(), res.size[0], res.size[1]
 
 def sig_tag(b64, sw, sh, cx, ybottom, w=2970, max_h=1700):
