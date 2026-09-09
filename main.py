@@ -231,6 +231,10 @@ def build_base_svg(assets, fonts, template, sponsored_by,
     if sponsored_by and not t2:
         pg,_=outline(GIF,f"Sponsored by {sponsored_by}.",ID_SIZE*0.92,CX,10500,"#000066","middle","promo")
         svg=PROMOTED_RE.sub(f'<g transform="matrix(1 0 0 1 15.2385 9990.25)">{pg}</g>',svg,count=1)
+    elif sponsored_by and t2:
+        # T2 has no promoted-by placeholder; inject the line below both signatories
+        pg,_=outline(GIF,f"Sponsored by {sponsored_by}.",ID_SIZE*0.85,CX,17050,"#000066","middle","promo")
+        svg=svg.replace('</svg>', pg+'\n</svg>')
     else:
         svg=PROMOTED_RE.sub('',svg,count=1)
 
