@@ -138,11 +138,13 @@ def remove_white_bg(img_bytes):
     res=Image.fromarray(data,'RGBA'); buf=io.BytesIO(); res.save(buf,'PNG')
     return base64.b64encode(buf.getvalue()).decode(), res.size[0], res.size[1]
 
-def sig_tag(b64, sw, sh, cx, ytop, w=2970, max_h=1300):
-    # Fit within w x max_h preserving aspect, so a tall signature scan can't
-    # grow downward into the signatory name printed below it.
-    scale=min(w/sw, max_h/sh); rw=sw*scale; rh=sh*scale; x=cx-rw/2
-    return (f'<image x="{x:.1f}" y="{ytop}" width="{rw:.1f}" height="{rh:.1f}" '
+def sig_tag(b64, sw, sh, cx, ybottom, w=2970, max_h=1700):
+    # Fit within w x max_h preserving aspect, then BOTTOM-anchor at ybottom so the
+    # signature sits just above the signatory name and grows upward — independent
+    # of the uploaded image's proportions.
+    scale=min(w/sw, max_h/sh); rw=sw*scale; rh=sh*scale
+    x=cx-rw/2; y=ybottom-rh
+    return (f'<image x="{x:.1f}" y="{y:.1f}" width="{rw:.1f}" height="{rh:.1f}" '
             f'preserveAspectRatio="xMidYMid meet" '
             f'xlink:href="data:image/png;base64,{b64}"/>')
 
@@ -210,12 +212,12 @@ def build_base_svg(assets, fonts, template, sponsored_by,
 
     s1b,s1w,s1h = remove_white_bg(base64.b64decode(assets['sig1']))
     sig1_cx = CX if not t2 else 4100
-    svg = svg.replace('</svg>', sig_tag(s1b,s1w,s1h,sig1_cx,17800)+'\n</svg>')
+    svg = svg.replace('</svg>', sig_tag(s1b,s1w,s1h,sig1_cx,19080)+'\n</svg>')
 
     if t2:
         if collab_sig_bytes:
             s2b,s2w,s2h = remove_white_bg(collab_sig_bytes)
-            svg = svg.replace('</svg>', sig_tag(s2b,s2w,s2h,int(SIG2_CX),17800)+'\n</svg>')
+            svg = svg.replace('</svg>', sig_tag(s2b,s2w,s2h,int(SIG2_CX),19080)+'\n</svg>')
         if collab_signer_name:
             cng,_=outline(RKB,collab_signer_name,423.33,SIG2_LOCAL_CX,10500,"black","middle","sig2n")
             svg=SIG2_NAME_RE.sub(f'<g transform="matrix(1 0 0 1 3201.97 9021.61)">{cng}</g>',svg,count=1)
