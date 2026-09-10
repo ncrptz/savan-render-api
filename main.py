@@ -7,6 +7,7 @@ POST /render  →  { certificates: [{cert_id, name, date, pdf_base64}] }
 import re, os, io, base64, json, tempfile, logging
 from pathlib import Path
 from typing import Optional
+import qrcode
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -160,6 +161,22 @@ def photo_block(pb, x, y, w, h):
             f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
             f'fill="none" stroke="#000066" stroke-width="20"/>')
 
+def qr_block(fonts, url, x, y, size):
+    # QR (white quiet-zone included) + a small canonical-URL caption beneath it.
+    q=qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=10, border=2)
+    q.add_data(url); q.make(fit=True)
+    img=q.make_image(fill_color="black", back_color="white").convert("RGB")
+    buf=io.BytesIO(); img.save(buf,'PNG'); b64=base64.b64encode(buf.getvalue()).decode()
+    tag=(f'<image x="{x}" y="{y}" width="{size}" height="{size}" '
+         f'xlink:href="data:image/png;base64,{b64}"/>')
+    dom=re.sub(r'^https?://','',url).split('/')[0]
+    cap="Verify at "+dom
+    fs=170
+    while _wem(fonts['RKF'],cap)*(fs/fonts['RKF']['upm']) > size+700 and fs>90:
+        fs-=8
+    cg,_=outline(fonts['RKF'],cap,fs,x+size/2,y+size+fs+70,"#555555","middle","qrcap")
+    return tag+cg
+
 def find_close(text, start):
     depth=0; i=start
     while i<len(text):
@@ -240,7 +257,7 @@ def build_base_svg(assets, fonts, template, sponsored_by,
 
 # ── Render one certificate ─────────────────────────────────────────────────────
 def render_one(base_svg, assets, fonts, name, year, month, session,
-               seq, date_str, template, photo_bytes):
+               seq, date_str, template, photo_bytes, token="", verify_base_url=""):
     import datetime as dt
     NF,RKF = fonts['NF'],fonts['RKF']
     t2 = (template=='T2')
@@ -266,6 +283,11 @@ def render_one(base_svg, assets, fonts, name, year, month, session,
         sx,sy,sw,sh=((10380,1570,3050,3380) if not t2 else (5940,1190,3050,3380))
         shadow=f'<image x="{sx}" y="{sy}" width="{sw}" height="{sh}" preserveAspectRatio="none" xlink:href="data:image/png;base64,{assets["photo_shadow"]}"/>'
         svg=svg.replace('</svg>', shadow+'\n'+photo_block(photo_bytes,x,y,w,h)+'\n</svg>')
+
+    if token and verify_base_url:
+        url=f"{verify_base_url.rstrip('/')}/verify?token={token}"
+        qx = 6825 if t2 else 760   # T2: centre gap between signatories; T1: bottom-left corner
+        svg=svg.replace('</svg>', qr_block(fonts,url,qx,18780,1150)+'\n</svg>')
 
     pdf = cairosvg.svg2pdf(bytestring=svg.encode('utf-8'))
     return base64.b64encode(pdf).decode(), cert_id
@@ -304,6 +326,7 @@ async def render_endpoint(
     sponsored_by = p.get("sponsored_by","")
     col_name     = p.get("collab_signer_name","")
     col_title    = p.get("collab_signer_title","")
+    verify_base_url = p.get("verify_base_url","")
     participants = p.get("participants",[])
 
     base_svg = build_base_svg(assets,fonts,template,sponsored_by,
@@ -320,7 +343,8 @@ async def render_endpoint(
                 name=part["name"], year=int(part["year"]),
                 month=int(part["month"]), session=int(part["session"]),
                 seq=int(part["seq"]), date_str=part["date"],
-                template=template, photo_bytes=ph)
+                template=template, photo_bytes=ph,
+                token=part.get("token",""), verify_base_url=verify_base_url)
             results.append({"cert_id":cert_id,"name":part["name"],
                             "date":part["date"],"pdf_base64":pdf_b64})
         except Exception as e:
