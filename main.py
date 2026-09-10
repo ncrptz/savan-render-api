@@ -286,8 +286,8 @@ def render_one(base_svg, assets, fonts, name, year, month, session,
 
     if token and verify_base_url:
         url=f"{verify_base_url.rstrip('/')}/verify?token={token}"
-        qx = 6825 if t2 else 760   # T2: centre gap between signatories; T1: bottom-left corner
-        svg=svg.replace('</svg>', qr_block(fonts,url,qx,18780,1150)+'\n</svg>')
+        # Left-aligned (under the cert-ID column), above the SAVAN signature — same on both templates
+        svg=svg.replace('</svg>', qr_block(fonts,url,850,16150,1050)+'\n</svg>')
 
     pdf = cairosvg.svg2pdf(bytestring=svg.encode('utf-8'))
     return base64.b64encode(pdf).decode(), cert_id
