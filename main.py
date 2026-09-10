@@ -228,13 +228,11 @@ def build_base_svg(assets, fonts, template, sponsored_by,
             ctg,_=outline(GIF,collab_signer_title,324.56,SIG2_CX,19892,"#373435","middle","sig2t")
             svg=SIG2_TITL_RE.sub(ctg,svg,count=1)
 
-    if sponsored_by and not t2:
-        pg,_=outline(GIF,f"Sponsored by {sponsored_by}.",ID_SIZE*0.92,CX,10500,"#000066","middle","promo")
+    # Both templates carry the same promoted-by placeholder; use it for both so
+    # the sponsor line sits in the identical spot (below the box) on T1 and T2.
+    if sponsored_by:
+        pg,_=outline(GIF,f"Sponsored by {sponsored_by}",ID_SIZE*0.92,CX,10500,"#000066","middle","promo")
         svg=PROMOTED_RE.sub(f'<g transform="matrix(1 0 0 1 15.2385 9990.25)">{pg}</g>',svg,count=1)
-    elif sponsored_by and t2:
-        # T2 has no promoted-by placeholder; inject the line below both signatories
-        pg,_=outline(GIF,f"Sponsored by {sponsored_by}.",ID_SIZE*0.85,CX,17050,"#000066","middle","promo")
-        svg=svg.replace('</svg>', pg+'\n</svg>')
     else:
         svg=PROMOTED_RE.sub('',svg,count=1)
 
