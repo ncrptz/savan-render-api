@@ -172,8 +172,9 @@ def qr_block(fonts, url, x, y, size):
     # Caption: fixed "Verify here" at 7pt for now. Restore the domain caption
     # (e.g. "Verify at "+dom) once the certificate moves to its final domain.
     cap="Verify here"
-    fs=7*UPP
-    cg,_=outline(fonts['RKF'],cap,fs,x+size/2,y+size+fs+70,"#555555","middle","qrcap")
+    fs=5*UPP
+    # Caption sits 3pt below the QR; its baseline lands on the seal bottom (see call site).
+    cg,_=outline(fonts['RKF'],cap,fs,x+size/2,y+size+3*UPP+fs,"#555555","middle","qrcap")
     return tag+cg
 
 def find_close(text, start):
@@ -287,7 +288,9 @@ def render_one(base_svg, assets, fonts, name, year, month, session,
         url=f"{verify_base_url.rstrip('/')}/verify?token={token}"
         # Left-aligned (under the cert-ID column), above the SAVAN signature — same on both templates.
         # QR 20% larger (1050→1260) with its bottom aligned to the red seal's bottom (seal y=13510 h=3167 → 16677).
-        svg=svg.replace('</svg>', qr_block(fonts,url,1600,15417,1260)+'\n</svg>')
+        # QR 20% larger again (1260->1512), left edge at 1600 (grows rightward),
+        # raised so the "Verify here" caption baseline aligns with the seal bottom (16677).
+        svg=svg.replace('</svg>', qr_block(fonts,url,1600,14883,1512)+'\n</svg>')
 
     pdf = cairosvg.svg2pdf(bytestring=svg.encode('utf-8'))
     return base64.b64encode(pdf).decode(), cert_id
