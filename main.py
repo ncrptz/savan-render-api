@@ -169,12 +169,11 @@ def qr_block(fonts, url, x, y, size):
     buf=io.BytesIO(); img.save(buf,'PNG'); b64=base64.b64encode(buf.getvalue()).decode()
     tag=(f'<image x="{x}" y="{y}" width="{size}" height="{size}" '
          f'xlink:href="data:image/png;base64,{b64}"/>')
-    # Two-line caption, left-aligned to the QR's left edge so the URL never
-    # runs into the page border: "Scan and verify" / the verify site URL.
+    # Two-line caption centred under the QR: "Scan and verify" / the verify site URL.
     fs=4*UPP; lead=fs+1.5*UPP
     base1=y+size+2*UPP+fs          # first baseline, 2pt below the QR
-    cg1,_=outline(fonts['RKF'],"Scan and verify",fs,x,base1,"#555555","start","qrcap1")
-    cg2,_=outline(fonts['RKF'],"https://verify.savan-ngo.org",fs,x,base1+lead,"#555555","start","qrcap2")
+    cg1,_=outline(fonts['RKF'],"Scan and verify",fs,x+size/2,base1,"#555555","middle","qrcap1")
+    cg2,_=outline(fonts['RKF'],"https://verify.savan-ngo.org",fs,x+size/2,base1+lead,"#555555","middle","qrcap2")
     return tag+cg1+cg2
 
 def find_close(text, start):
