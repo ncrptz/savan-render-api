@@ -169,13 +169,13 @@ def qr_block(fonts, url, x, y, size):
     buf=io.BytesIO(); img.save(buf,'PNG'); b64=base64.b64encode(buf.getvalue()).decode()
     tag=(f'<image x="{x}" y="{y}" width="{size}" height="{size}" '
          f'xlink:href="data:image/png;base64,{b64}"/>')
-    # Caption: fixed "Verify here" at 7pt for now. Restore the domain caption
-    # (e.g. "Verify at "+dom) once the certificate moves to its final domain.
-    cap="Verify here"
-    fs=5*UPP
-    # Caption sits 3pt below the QR; its baseline lands on the seal bottom (see call site).
-    cg,_=outline(fonts['RKF'],cap,fs,x+size/2,y+size+3*UPP+fs,"#555555","middle","qrcap")
-    return tag+cg
+    # Two-line caption, left-aligned to the QR's left edge so the URL never
+    # runs into the page border: "Scan and verify" / the verify site URL.
+    fs=4*UPP; lead=fs+1.5*UPP
+    base1=y+size+2*UPP+fs          # first baseline, 2pt below the QR
+    cg1,_=outline(fonts['RKF'],"Scan and verify",fs,x,base1,"#555555","start","qrcap1")
+    cg2,_=outline(fonts['RKF'],"https://verify.savan-ngo.org",fs,x,base1+lead,"#555555","start","qrcap2")
+    return tag+cg1+cg2
 
 def find_close(text, start):
     depth=0; i=start
@@ -289,8 +289,9 @@ def render_one(base_svg, assets, fonts, name, year, month, session,
         # Left-aligned (under the cert-ID column), above the SAVAN signature — same on both templates.
         # QR 20% larger (1050→1260) with its bottom aligned to the red seal's bottom (seal y=13510 h=3167 → 16677).
         # QR 20% larger again (1260->1512), left edge at 1600 (grows rightward),
-        # raised so the "Verify here" caption baseline aligns with the seal bottom (16677).
-        svg=svg.replace('</svg>', qr_block(fonts,url,1600,14883,1512)+'\n</svg>')
+        # raised so the caption's LAST line (the URL) has its baseline on the seal bottom (16677):
+        # y = 16677 - 1512 - 2pt - 4pt (line 1) - 5.5pt (line 2 lead) = 14759.
+        svg=svg.replace('</svg>', qr_block(fonts,url,1600,14759,1512)+'\n</svg>')
 
     pdf = cairosvg.svg2pdf(bytestring=svg.encode('utf-8'))
     return base64.b64encode(pdf).decode(), cert_id
